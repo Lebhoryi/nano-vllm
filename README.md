@@ -10,6 +10,14 @@
 
 A lightweight vLLM implementation built from scratch.
 
+---
+
+基于 [原 nano-vllm](https://github.com/GeeeekExplorer/nano-vllm) 做了如下修改：
+1. 增加了中文注释代码
+2. 修改了 flash attention 调用逻辑，在下环境不支持 flash attention，回退到普通版本的 attention
+
+建议和 https://deepwiki.com/GeeeekExplorer/nano-vllm 一起食用最佳。
+
 ## Key Features
 
 * 🚀 **Fast offline inference** - Comparable inference speeds to vLLM

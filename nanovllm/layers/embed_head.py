@@ -14,12 +14,12 @@ class VocabParallelEmbedding(nn.Module):
         embedding_dim: int,
     ):
         super().__init__()
-        self.tp_rank = dist.get_rank()
-        self.tp_size = dist.get_world_size()
-        assert num_embeddings % self.tp_size == 0
-        self.num_embeddings = num_embeddings
-        self.num_embeddings_per_partition = self.num_embeddings // self.tp_size
-        self.vocab_start_idx = self.num_embeddings_per_partition * self.tp_rank
+        self.tp_rank = dist.get_rank()  # 返回当前 rank id
+        self.tp_size = dist.get_world_size()  # 计算有多少个 rank，是否是多进程
+        assert num_embeddings % self.tp_size == 0 # 词表大小能被模型并行数整除, 判断是否可以多进程并行
+        self.num_embeddings = num_embeddings  # 词表大小
+        self.num_embeddings_per_partition = self.num_embeddings // self.tp_size  # 75968 计算每个 rank 有多少个 embedding
+        self.vocab_start_idx = self.num_embeddings_per_partition * self.tp_rank  # 计算当前 rank 负责的词表区间起始索引
         self.vocab_end_idx = self.vocab_start_idx + self.num_embeddings_per_partition
         self.weight = nn.Parameter(torch.empty(self.num_embeddings_per_partition, embedding_dim))
         self.weight.weight_loader = self.weight_loader
@@ -32,10 +32,10 @@ class VocabParallelEmbedding(nn.Module):
         param_data.copy_(loaded_weight)
 
     def forward(self, x: torch.Tensor):
-        if self.tp_size > 1:
-            mask = (x >= self.vocab_start_idx) & (x < self.vocab_end_idx)
-            x = mask * (x - self.vocab_start_idx)
-        y = F.embedding(x, self.weight)
+        if self.tp_size > 1:  # 多卡，多 rank
+            mask = (x >= self.vocab_start_idx) & (x < self.vocab_end_idx)  # 标记当前 token 是否属于“本 rank 负责的词表区间”
+            x = mask * (x - self.vocab_start_idx)  # 将当前 token 映射到“本 rank 负责的词表区间”
+        y = F.embedding(x, self.weight)  # 查询 embedding, x shape[16384] y shape[16384, 1024] self.weight shape [75968, 1024]
         if self.tp_size > 1:
             y = mask.unsqueeze(1) * y
             dist.all_reduce(y)
