@@ -18,6 +18,12 @@ A lightweight vLLM implementation built from scratch.
 
 建议和 https://deepwiki.com/GeeeekExplorer/nano-vllm 一起食用最佳。
 
+与 cursor 的对话记录：[./cursor_faq](./cursor_faq/)
+
+---
+
+示例：python example.py
+
 ## Key Features
 
 * 🚀 **Fast offline inference** - Comparable inference speeds to vLLM
